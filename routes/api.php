@@ -10,11 +10,14 @@ use Illuminate\Support\Facades\Route;
 //     return $request->user();
 // })->middleware('auth:sanctum');
 
-Route::get('/products', [ProductController::class, 'index']);
-
 Route::apiResource('/transactions', TransactionController::class)
     ->only(['index', 'show', 'store']);
 
 Route::apiResource('/cart', CartController::class)
     ->only(['index', 'store', 'update', 'destroy']);
 Route::delete('/cart', [CartController::class, 'deleteItem']);
+
+Route::apiResource('products', ProductController::class)->only([
+    'index',
+    'show',
+]);

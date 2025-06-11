@@ -35,7 +35,26 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        //
+        $product->load('category');
+        if (!$product) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        $productData = $product->toArray();
+        if ($product->category) {
+            $productData['category_name'] = $product->category->name;
+        }
+        unset($productData['category']);
+        unset($productData['category_id']);
+
+        return response()->json([
+            'code' => 200,
+            'message' => 'Product retrieved successfully',
+            'data' => $productData,
+        ]);
     }
 
     /**
