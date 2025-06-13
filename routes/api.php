@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
@@ -13,3 +14,7 @@ Route::get('/products', [ProductController::class, 'index']);
 
 Route::apiResource('/transactions', TransactionController::class)
     ->only(['index', 'show', 'store']);
+
+Route::apiResource('/cart', CartController::class)
+    ->only(['index', 'store', 'update', 'destroy']);
+Route::delete('/cart', [CartController::class, 'deleteItem']);
