@@ -21,3 +21,5 @@ Route::apiResource('products', ProductController::class)->only([
     'index',
     'show',
 ]);
+
+Route::get('/products', [ProductController::class, 'getProductsByCategory']);
