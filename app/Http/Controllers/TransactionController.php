@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
 use App\Http\Requests\UpdateTransactionRequest;
+use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 
 class TransactionController extends Controller
@@ -15,18 +16,10 @@ class TransactionController extends Controller
     {
         $transactions = Transaction::with('products.category')->get();
 
-        $transactions->each(function ($transaction) {
-            $transaction->products->each(function ($product) {
-                $product->quantity = $product->pivot->quantity;
-                $category_name = $product->category->name;
-                unset($product->category);
-                $product->category = $category_name;
-                unset($product->category_id);
-                unset($product->pivot);
-            });
-        });
+        $transactions = TransactionResource::collection($transactions);
 
         return response()->json([
+            'code' => 200,
             'message' => 'Transactions retrieved successfully',
             'data' => $transactions,
         ]);
@@ -49,16 +42,10 @@ class TransactionController extends Controller
 
         $transaction->load('products.category');
 
-        $transaction->products->each(function ($product) {
-            $product->quantity = $product->pivot->quantity;
-            $category_name = $product->category->name;
-            unset($product->category);
-            $product->category = $category_name;
-            unset($product->category_id);
-            unset($product->pivot);
-        });
+        $transaction = new TransactionResource($transaction);
 
         return response()->json([
+            'code' => 201,
             'message' => 'Transaction created successfully',
             'data' => $transaction,
         ], 201);

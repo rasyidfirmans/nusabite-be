@@ -6,15 +6,30 @@ use App\Http\Requests\GetProductsByCategoryRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use Illuminate\Http\Request;
+use App\Http\Resources\ProductResource;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $category = $request->query('category');
         $products = Product::with('category')->get();
+
+        if ($category) {
+            $products = Product::with('category')
+                ->whereHas('category', function ($query) use ($category) {
+                    $query->where('name', $category);
+                })
+                ->get();
+        } else {
+            $products = Product::with('category')->get();
+        }
+
+        $products = ProductResource::collection($products);
 
         return response()->json([
             'code' => 200,
@@ -44,12 +59,7 @@ class ProductController extends Controller
             ], 404);
         }
 
-        $productData = $product->toArray();
-        if ($product->category) {
-            $productData['category_name'] = $product->category->name;
-        }
-        unset($productData['category']);
-        unset($productData['category_id']);
+        $productData = new ProductResource($product);
 
         return response()->json([
             'code' => 200,
@@ -72,23 +82,5 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         //
-    }
-
-    public function getProductsByCategory(GetProductsByCategoryRequest $request)
-    {
-        $products = Product::where('category_id', $request->category_id)->with('category')->get();
-
-        $products->each(function ($product) {
-            $category_name = $product->category->name;
-            unset($product->category);
-            $product->category = $category_name;
-            unset($product->category_id);
-        });
-
-        return response()->json([
-            'code' => 200,
-            'message' => 'Products retrieved successfully',
-            'data' => $products,
-        ]);
     }
 }

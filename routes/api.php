@@ -15,11 +15,8 @@ Route::apiResource('/transactions', TransactionController::class)
 
 Route::apiResource('/cart', CartController::class)
     ->only(['index', 'store', 'update', 'destroy']);
-Route::delete('/cart', [CartController::class, 'deleteItem']);
 
 Route::apiResource('products', ProductController::class)->only([
     'index',
     'show',
 ]);
-
-Route::get('/products', [ProductController::class, 'getProductsByCategory']);

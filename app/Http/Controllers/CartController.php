@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\DeleteItemRequest;
-use App\Http\Requests\StoreCartRequest;
-use App\Http\Requests\UpdateCartRequest;
 use App\Models\Cart;
+use Illuminate\Http\Request;
+use App\Http\Resources\CartResource;
+use App\Http\Requests\StoreCartRequest;
+use App\Http\Requests\DeleteItemRequest;
+use App\Http\Requests\UpdateCartRequest;
 
 class CartController extends Controller
 {
@@ -14,7 +16,12 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cart = Cart::with(['products', 'products.category'])->first();
+        $cart_id = request()->query('id', null);
+
+        $cart = Cart::with(['products', 'products.category'])
+            ->where('id', $cart_id)
+            ->first();
+
         if (!$cart) {
             return response()->json([
                 'code' => 404,
@@ -22,20 +29,12 @@ class CartController extends Controller
             ], 404);
         }
 
-        $cart->products->each(function ($product) {
-            $product->quantity = $product->pivot->quantity;
-            $category_name = $product->category->name;
-            unset($product->category);
-            $product->category = $category_name;
-
-            unset($product->pivot);
-            unset($product->category_id);
-        });
+        $cartResource = new CartResource($cart);
 
         return response()->json([
             'code' => 200,
             'message' => 'Cart retrieved successfully',
-            'data' => $cart,
+            'data' => $cartResource,
         ]);
     }
 
@@ -60,15 +59,7 @@ class CartController extends Controller
         }
 
         $cart->load(['products', 'products.category']);
-        $cart->products->each(function ($product) {
-            $product->quantity = $product->pivot->quantity;
-            $category_name = $product->category->name;
-            unset($product->category);
-            $product->category = $category_name;
-
-            unset($product->pivot);
-            unset($product->category_id);
-        });
+        $cart = new CartResource($cart);
 
         return response()->json([
             'code' => 201,
@@ -104,28 +95,21 @@ class CartController extends Controller
         }
 
         $cart->load(['products', 'products.category']);
-        $cart->products->each(function ($product) {
-            $product->quantity = $product->pivot->quantity;
-            $category_name = $product->category->name;
-            unset($product->category);
-            $product->category = $category_name;
 
-            unset($product->pivot);
-            unset($product->category_id);
-        });
+        $cartResource = new CartResource($cart);
 
         return response()->json([
             'code' => 200,
             'message' => 'Cart updated successfully',
-            'data' => $cart,
+            'data' => $cartResource,
         ]);
     }
-
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Cart $cart)
+    public function destroy(Request $request, Cart $cart)
     {
+        $product_id = $request->query('id', null);
         if (!$cart) {
             return response()->json([
                 'code' => 404,
@@ -133,33 +117,27 @@ class CartController extends Controller
             ], 404);
         }
 
-        $cart->products()->detach();
+        if ($product_id) {
+            if (!$cart->products()->where('product_id', $product_id)->exists()) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Product not found in cart',
+                ], 404);
+            }
 
-        return response()->json([
-            'code' => 200,
-            'message' => 'Cart was cleared successfully',
-        ]);
-    }
+            $cart->products()->detach($product_id);
 
-    public function deleteItem(DeleteItemRequest $request)
-    {
-        $product_item = Cart::with('products')
-            ->whereHas('products', function ($query) use ($request) {
-                $query->where('product_id', $request->product_id);
-            })->first();
-
-        if (!$product_item) {
             return response()->json([
-                'code' => 404,
-                'message' => 'Product not found in cart',
-            ], 404);
+                'code' => 200,
+                'message' => 'Item removed from cart successfully',
+            ]);
         } else {
-            $product_item->products()->detach($request->product_id);
+            $cart->products()->detach();
         }
 
         return response()->json([
             'code' => 200,
-            'message' => 'Item removed from cart successfully',
+            'message' => 'Cart was cleared successfully',
         ]);
     }
 }
